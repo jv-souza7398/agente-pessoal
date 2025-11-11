@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import { novoLocalSchema } from "./NovoLocal.js";
+import { novoLocalSchema } from "./NovoLocalSchema.js";
 import { validateNovoLocal } from "./middlewre.js";
 
 dotenv.config();
