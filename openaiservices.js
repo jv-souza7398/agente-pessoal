@@ -1,8 +1,10 @@
 import OpenAI from "openai";
-import { zodResponseFormat } from "openai/helpers/zod.mjs";
-import { outputOpenAiSchema } from "./OutputSchema";
+import { outputOpenAiSchema } from "./OutputSchema.js";
+import dotenv from "dotenv";
 
-const client = new OpenaAI({
+dotenv.config();
+
+const client = new OpenAI({
   apiKey: process.env.API_KEY_OPENAI,
 });
 
@@ -33,18 +35,18 @@ export async function assistentePessoalNovoLocal(nomelocal, categoria, adress) {
           strict: true,
           schema: {
             type: "object",
-            porperties: {
+            properties: {
               returnForms: {
                 type: "object",
-                poperties: {
-                  nomeLocal: { type: "string" },
+                properties: {
+                  nomelocal: { type: "string" },
                   endereçoLocal: { type: "string" },
                   categoriaLocal: { type: "string" },
                   descricaoLocal: { type: "string" },
                   sugestaoUsoLocal: { type: "string" },
                 },
                 required: [
-                  "nomeLocal",
+                  "nomelocal",
                   "endereçoLocal",
                   "categoriaLocal",
                   "descricaoLocal",
@@ -53,7 +55,7 @@ export async function assistentePessoalNovoLocal(nomelocal, categoria, adress) {
                 additionalProperties: false,
               },
             },
-            required: ["returForms"],
+            required: ["returnForms"],
             additionalProperties: false,
           },
         },
