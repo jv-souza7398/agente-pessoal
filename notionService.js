@@ -5,6 +5,7 @@ dotenv.config();
 
 const notion = new Client({
   auth: process.env.NOTION_API_KEY,
+  notionVersion: "2025-09-03",
 });
 
 export async function criarPaginaNovoLocal(dados) {
@@ -19,6 +20,12 @@ export async function criarPaginaNovoLocal(dados) {
       timestamp,
     } = dados;
 
+    const database = await notion.databases.retrieve({
+      database_id: process.env.NOTION_DATABASE_LOCAIS_ID,
+    });
+
+    const dataSourceId = database.data_source_id;
+
     // ✅ Criar a página no Notion
     const response = await notion.pages.create({
       icon: {
@@ -26,8 +33,8 @@ export async function criarPaginaNovoLocal(dados) {
         emoji: "📍", // Ícone de localização
       },
       parent: {
-        type: "database_id",
-        database_id: "a8c89ea9-00c8-0681-bfc6-750bc531bf",
+        type: "data_source_id",
+        data_source_id: dataSourceId,
       },
       properties: {
         // Ajuste os nomes conforme suas colunas no Notion
