@@ -27,26 +27,26 @@ export async function criarPaginaNovoLocal(dados) {
         database_id: process.env.NOTION_DATABASE_LOCAIS_ID, // ✅ CORRETO
       },
       properties: {
-        "Nome do Local": {
+        nomelocal: {
           title: [
             {
               text: { content: nomelocal },
             },
           ],
         },
-        Endereço: {
+        endereçoLocal: {
           rich_text: [{ text: { content: endereçoLocal } }],
         },
-        Categoria: {
+        categoriaLocal: {
           rich_text: [{ text: { content: categoriaLocal } }],
         },
-        Descrição: {
+        descricaoLocal: {
           rich_text: [{ text: { content: descricaoLocal } }],
         },
-        "Sugestões de Uso": {
+        sugestaoUsoLocal: {
           rich_text: [{ text: { content: sugestaoUsoLocal } }],
         },
-        "Criado em": {
+        timestamp: {
           date: { start: timestamp },
         },
       },
