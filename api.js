@@ -24,14 +24,14 @@ const authenticateAPI = (req, res, next) => {
     });
   }
 
-  next();
-};
+  next(); // ✅ CHAMA NEXT() PARA CONTINUAR
+}; // ✅ FECHA A FUNÇÃO
 
-// ✅ Rota principal
+// ✅ AGORA SIM DEFINE A ROTA
 app.post(
   "/novoLocal",
-  authenticateAPI, // ✅ PRIMEIRO autentica
-  validateNovoLocal(novoLocalSchema), // ✅ DEPOIS valida
+  authenticateAPI,
+  validateNovoLocal(novoLocalSchema),
   async (req, res) => {
     try {
       console.log("✅ Dados validados:", req.body);
