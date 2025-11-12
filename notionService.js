@@ -10,9 +10,8 @@ const notion = new Client({
 
 export async function criarPaginaNovoLocal(dados) {
   try {
-    // ✅ Desestruturar os dados
     const {
-      nomeLocal,
+      nomelocal,
       endereçoLocal,
       categoriaLocal,
       descricaoLocal,
@@ -20,87 +19,48 @@ export async function criarPaginaNovoLocal(dados) {
       timestamp,
     } = dados;
 
-    const database = await notion.databases.retrieve({
-      database_id: process.env.NOTION_DATABASE_LOCAIS_ID,
-    });
+    console.log("📝 Tentando criar página com dados:", { nomelocal });
 
-    const dataSourceId = database.data_source_id;
-
-    // ✅ Criar a página no Notion
     const response = await notion.pages.create({
-      icon: {
-        type: "emoji",
-        emoji: "📍", // Ícone de localização
-      },
       parent: {
-        type: "data_source_id",
-        data_source_id: dataSourceId,
+        type: "database_id",
+        database_id: process.env.NOTION_DATABASE_LOCAIS_ID, // ✅ CORRETO
       },
       properties: {
-        // Ajuste os nomes conforme suas colunas no Notion
-        nomeLocal: {
+        nomelocal: {
           title: [
             {
-              text: {
-                content: nomeLocal,
-              },
+              text: { content: nomelocal },
             },
           ],
         },
         endereçoLocal: {
-          rich_text: [
-            {
-              text: {
-                content: endereçoLocal,
-              },
-            },
-          ],
+          rich_text: [{ text: { content: endereçoLocal } }],
         },
         categoriaLocal: {
-          rich_text: [
-            {
-              text: {
-                content: categoriaLocal,
-              },
-            },
-          ],
+          rich_text: [{ text: { content: categoriaLocal } }],
         },
         descricaoLocal: {
-          rich_text: [
-            {
-              text: {
-                content: descricaoLocal,
-              },
-            },
-          ],
+          rich_text: [{ text: { content: descricaoLocal } }],
         },
         sugestaoUsoLocal: {
-          rich_text: [
-            {
-              text: {
-                content: sugestaoUsoLocal,
-              },
-            },
-          ],
+          rich_text: [{ text: { content: sugestaoUsoLocal } }],
         },
         timestamp: {
-          date: {
-            start: timestamp, // Já vem em ISO string
-          },
+          date: { start: timestamp },
         },
       },
     });
 
-    // ✅ Retornar os dados da página criada
-    console.log("✅ Página criada no Notion:", response.id);
+    console.log("✅ Página criada com sucesso:", response.url);
 
     return {
       pageId: response.id,
       url: response.url,
-      title: nomeLocal,
+      title: nomelocal,
     };
   } catch (erro) {
-    console.error("❌ Erro ao criar página no Notion:", erro.message);
+    console.error("❌ ERRO ao criar página:", erro.message);
     throw erro;
   }
 }

@@ -1,9 +1,9 @@
+import dotenv from "dotenv";
 import express from "express";
 import { novoLocalSchema } from "./NovoLocalSchema.js";
 import { validateNovoLocal } from "./middleware.js";
 import { assistentePessoalNovoLocal } from "./openaiservices.js";
 import { criarPaginaNovoLocal } from "./notionService.js";
-import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -14,7 +14,7 @@ app.use(express.json());
 
 app.post("/novoLocal", validateNovoLocal(novoLocalSchema), async (req, res) => {
   try {
-    console.log("Dados validados", req.body);
+    console.log("✅ Dados validados:", req.body);
 
     const { nomelocal, categoria } = req.body.details;
     const { adress } = req.body.forms;
@@ -30,17 +30,15 @@ app.post("/novoLocal", validateNovoLocal(novoLocalSchema), async (req, res) => {
     console.log("Resposta do ChatGPT:", resultOpenAI);
 
     const dadosNotion = {
-      nomeLocal:
-        resultOpenAI.returnForms.nomelocal ||
-        resultOpenAI.returnForms.nomeLocal,
+      nomelocal: resultOpenAI.returnForms.nomelocal,
       endereçoLocal: resultOpenAI.returnForms.endereçoLocal,
       categoriaLocal: resultOpenAI.returnForms.categoriaLocal,
       descricaoLocal: resultOpenAI.returnForms.descricaoLocal,
       sugestaoUsoLocal: resultOpenAI.returnForms.sugestaoUsoLocal,
-      timestamp: new Date().toISOString(), // Adicionar timestamp
+      timestamp: new Date().toISOString(),
     };
 
-    console.log("Dados preparados para Notion:", dadosNotion);
+    console.log("📝 Dados preparados para Notion:", dadosNotion);
 
     const pageNotion = await criarPaginaNovoLocal(dadosNotion);
 
@@ -58,7 +56,7 @@ app.post("/novoLocal", validateNovoLocal(novoLocalSchema), async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (erro) {
-    console.log("Erro no processamento:", erro.message);
+    console.error("❌ Erro no processamento:", erro.message);
 
     res.status(500).json({
       status: "erro",
@@ -67,15 +65,6 @@ app.post("/novoLocal", validateNovoLocal(novoLocalSchema), async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   }
-
-  /* 1. Imprimir re.body
-  console.log("JSON recebido:", req.body);
-
-  // 2. Acessando campos específicos
-  console.log("Nome do local:", req.body.details.nomelocal);
-
-  // 3. Responder com um JSON de confirmação
-  */
 });
 
 app.get("/", (req, res) => {

@@ -11,17 +11,18 @@ const client = new OpenAI({
 export async function assistentePessoalNovoLocal(nomelocal, categoria, adress) {
   try {
     const userMessage = `
-      Nome do local: ${nomelocal}
-      Categoria: ${categoria}
-      Endereço: ${adress}
-    `;
+Nome do local: ${nomelocal}
+Categoria: ${categoria}
+Endereço: ${adress}
+`;
 
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "Mensagem de envio. Retorne sempre em JSON",
+          content:
+            "Você é um assistente que descreve locais. Retorne SEMPRE em JSON no formato especificado com nomelocal (minúsculo).",
         },
         {
           role: "user",
@@ -64,9 +65,14 @@ export async function assistentePessoalNovoLocal(nomelocal, categoria, adress) {
 
     const resultOpenAI = JSON.parse(response.choices[0].message.content);
 
+    console.log(
+      "🔍 Resposta completa do ChatGPT:",
+      JSON.stringify(resultOpenAI, null, 2)
+    );
+
     return resultOpenAI;
   } catch (erro) {
-    console.error("Erro ao chamar API OpenAI:", erro);
+    console.error("❌ Erro ao chamar API OpenAI:", erro.message);
     throw erro;
   }
 }
