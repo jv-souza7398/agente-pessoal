@@ -12,7 +12,22 @@ const PORT = 3000;
 
 app.use(express.json());
 
-app.post("/novoLocal", validateNovoLocal(novoLocalSchema), async (req, res) => {
+const authenticateAPI = (req, res, next) => {
+  const apiKey = req.headers["x-api-key"];
+  const expectedKey = process.env.API_SECRET_KEY;
+
+  if (!apiKey || apiKey !== expectedKey) {
+    return res.status(401).json({
+      status: "erro",
+      message: "Não autorizado. X-API-Key header é obrigatório.",
+    });
+  }
+
+app.post(
+  "/novoLocal",
+  authenticateAPI,
+  validateNovoLocal(novoLocalSchema), 
+  async (req, res) => {
   try {
     console.log("✅ Dados validados:", req.body);
 
