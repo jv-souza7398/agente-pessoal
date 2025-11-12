@@ -12,6 +12,7 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// ✅ Middleware de autenticação
 const authenticateAPI = (req, res, next) => {
   const apiKey = req.headers["x-api-key"];
   const expectedKey = process.env.API_SECRET_KEY;
@@ -23,64 +24,71 @@ const authenticateAPI = (req, res, next) => {
     });
   }
 
+  next(); // ✅ CHAMA NEXT() PARA CONTINUAR
+}; // ✅ FECHA A FUNÇÃO
+
+// ✅ AGORA SIM DEFINE A ROTA
 app.post(
   "/novoLocal",
   authenticateAPI,
-  validateNovoLocal(novoLocalSchema), 
+  validateNovoLocal(novoLocalSchema),
   async (req, res) => {
-  try {
-    console.log("✅ Dados validados:", req.body);
+    try {
+      console.log("✅ Dados validados:", req.body);
 
-    const { nomelocal, categoria } = req.body.details;
-    const { adress } = req.body.forms;
+      const { nomelocal, categoria } = req.body.details;
+      const { adress } = req.body.forms;
 
-    console.log(`Chamando ChatGPT com: ${nomelocal}, ${categoria}, ${adress}`);
+      console.log(
+        `Chamando ChatGPT com: ${nomelocal}, ${categoria}, ${adress}`
+      );
 
-    const resultOpenAI = await assistentePessoalNovoLocal(
-      nomelocal,
-      categoria,
-      adress
-    );
+      const resultOpenAI = await assistentePessoalNovoLocal(
+        nomelocal,
+        categoria,
+        adress
+      );
 
-    console.log("Resposta do ChatGPT:", resultOpenAI);
+      console.log("Resposta do ChatGPT:", resultOpenAI);
 
-    const dadosNotion = {
-      nomelocal: resultOpenAI.returnForms.nomelocal,
-      endereçoLocal: resultOpenAI.returnForms.endereçoLocal,
-      categoriaLocal: resultOpenAI.returnForms.categoriaLocal,
-      descricaoLocal: resultOpenAI.returnForms.descricaoLocal,
-      sugestaoUsoLocal: resultOpenAI.returnForms.sugestaoUsoLocal,
-      timestamp: new Date().toISOString(),
-    };
+      const dadosNotion = {
+        nomelocal: resultOpenAI.returnForms.nomelocal,
+        endereçoLocal: resultOpenAI.returnForms.endereçoLocal,
+        categoriaLocal: resultOpenAI.returnForms.categoriaLocal,
+        descricaoLocal: resultOpenAI.returnForms.descricaoLocal,
+        sugestaoUsoLocal: resultOpenAI.returnForms.sugestaoUsoLocal,
+        timestamp: new Date().toISOString(),
+      };
 
-    console.log("📝 Dados preparados para Notion:", dadosNotion);
+      console.log("📝 Dados preparados para Notion:", dadosNotion);
 
-    const pageNotion = await criarPaginaNovoLocal(dadosNotion);
+      const pageNotion = await criarPaginaNovoLocal(dadosNotion);
 
-    console.log("✅ Página criada no Notion:", pageNotion);
+      console.log("✅ Página criada no Notion:", pageNotion);
 
-    res.status(200).json({
-      status: "success",
-      message: "Dados processados com sucesso e página criada no Notion",
-      resultOpenAi: resultOpenAI,
-      pageCreated: {
-        id: pageNotion.pageId,
-        url: pageNotion.url,
-        title: pageNotion.title,
-      },
-      timestamp: new Date().toISOString(),
-    });
-  } catch (erro) {
-    console.error("❌ Erro no processamento:", erro.message);
+      res.status(200).json({
+        status: "success",
+        message: "Dados processados com sucesso e página criada no Notion",
+        resultOpenAi: resultOpenAI,
+        pageCreated: {
+          id: pageNotion.pageId,
+          url: pageNotion.url,
+          title: pageNotion.title,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (erro) {
+      console.error("❌ Erro no processamento:", erro.message);
 
-    res.status(500).json({
-      status: "erro",
-      message: "Erro ao processar a requisição",
-      details: erro.message,
-      timestamp: new Date().toISOString(),
-    });
+      res.status(500).json({
+        status: "erro",
+        message: "Erro ao processar a requisição",
+        details: erro.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
-});
+);
 
 app.get("/", (req, res) => {
   res.send("Olá, mundo");
@@ -91,4 +99,5 @@ if (process.env.NODE_ENV !== "production") {
     console.log(`O servidor está rodando na porta ${PORT}`);
   });
 }
+
 export default app;
