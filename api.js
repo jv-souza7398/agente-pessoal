@@ -71,6 +71,9 @@ app.get("/", (req, res) => {
   res.send("Olá, mundo");
 });
 
-app.listen(PORT, () => {
-  console.log(`O servidor está rodando na porta ${PORT}`);
-});
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`O servidor está rodando na porta ${PORT}`);
+  });
+}
+export default app;
