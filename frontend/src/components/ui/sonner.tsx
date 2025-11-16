@@ -3,14 +3,14 @@
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast } from "sonner";
 
-export { toast }; // <- torna o toast disponível para page.tsx
+export { toast };
 
 export function Toaster() {
   const { theme = "system" } = useTheme();
 
   return (
     <Sonner
-      theme={theme}
+      theme={theme as "light" | "dark" | "system" | undefined}
       className="toaster group"
       toastOptions={{
         classNames: {
