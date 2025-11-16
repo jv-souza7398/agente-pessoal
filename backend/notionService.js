@@ -64,3 +64,61 @@ export async function criarPaginaNovoLocal(dados) {
     throw erro;
   }
 }
+
+// -------------------------
+// NOVA FUNÇÃO PARA FILMES
+// -------------------------
+export async function criarPaginaNovoFilme({
+  nomeFilme,
+  categoriaFilme,
+  sinopseFilme,
+  timestamp,
+}) {
+  try {
+    console.log("📄 Criando página de filme no Notion...");
+
+    const response = await notion.pages.create({
+      parent: {
+        type: "database_id",
+        database_id: process.env.NOTION_DATABASE_FILMES_ID,
+      },
+      properties: {
+        "Nome do Filme": {
+          title: [
+            {
+              text: { content: nomeFilme },
+            },
+          ],
+        },
+        Categoria: {
+          rich_text: [
+            {
+              text: { content: categoriaFilme },
+            },
+          ],
+        },
+        Sinopse: {
+          rich_text: [
+            {
+              text: { content: sinopseFilme },
+            },
+          ],
+        },
+        "Criado em": {
+          date: { start: timestamp },
+        },
+      },
+    });
+
+    console.log("🎬 Página criada! ID:", response.id);
+
+    return {
+      pageId: response.id,
+      url: response.url,
+      title: nomeFilme,
+    };
+  } catch (erro) {
+    console.error("❌ Erro ao criar página de filme:", erro.message);
+    throw erro;
+  }
+}

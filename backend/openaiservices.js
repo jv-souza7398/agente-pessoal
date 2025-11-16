@@ -76,3 +76,80 @@ Endereço: ${adress}
     throw erro;
   }
 }
+
+// -------------------------
+// NOVA FUNÇÃO PARA FILMES
+// -------------------------
+export async function assistentePessoalNovoFilme(userInput) {
+  try {
+    const prompt = `
+String recebida: "${userInput}"
+
+Com base no nome do filme enviado,
+retorne JSON com:
+- nomeFilme
+- categoriaFilme
+- sinopseFilme
+
+# Se atente a categoria, garanta que a categoria está de acordo com o filme
+
+Siga este formato:
+
+{
+  "returnForms": {
+    "nomeFilme": "",
+    "categoriaFilme": "",
+    "sinopseFilme": ""
+  }
+}
+`;
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Você é um assistente que analisa filmes e retorna JSON estruturado.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "filme_schema",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              returnForms: {
+                type: "object",
+                properties: {
+                  nomeFilme: { type: "string" },
+                  categoriaFilme: { type: "string" },
+                  sinopseFilme: { type: "string" },
+                },
+                required: ["nomeFilme", "categoriaFilme", "sinopseFilme"],
+                additionalProperties: false,
+              },
+            },
+            required: ["returnForms"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+
+    const result = JSON.parse(response.choices[0].message.content);
+
+    console.log("🎬 Resultado OpenAI (novoFilme):", result);
+
+    return result;
+  } catch (erro) {
+    console.error("❌ Erro ao chamar OpenAI (novoFilme):", erro.message);
+    throw erro;
+  }
+}

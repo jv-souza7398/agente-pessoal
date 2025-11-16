@@ -2,8 +2,12 @@ import dotenv from "dotenv";
 import express from "express";
 import { novoLocalSchema } from "./NovoLocalSchema.js";
 import { validateNovoLocal } from "./middleware.js";
-import { assistentePessoalNovoLocal } from "./openaiservices.js";
-import { criarPaginaNovoLocal } from "./notionService.js";
+import {
+  assistentePessoalNovoLocal,
+  assistentePessoalNovoFilme,
+} from "./openaiservices.js";
+
+import { criarPaginaNovoLocal, criarPaginaNovoFilme } from "./notionService.js";
 
 dotenv.config();
 
@@ -89,6 +93,59 @@ app.post(
     }
   }
 );
+
+app.post("/novoFilme", async (req, res) => {
+  try {
+    console.log("📩 Requisição recebida em /novoFilme:", req.body);
+
+    // Espera-se um body assim:
+    // { "input": "Transforme: Lado Oculto da Lua" }
+    const { input } = req.body;
+
+    if (!input) {
+      return res.status(400).json({
+        status: "erro",
+        message: "O campo 'input' é obrigatório.",
+      });
+    }
+
+    // 1️⃣ Chama OpenAI para estruturar o filme
+    const respostaOpenAI = await assistentePessoalNovoFilme(input);
+
+    console.log("🎬 Retorno OpenAI (novoFilme):", respostaOpenAI);
+
+    const { nomeFilme, categoriaFilme, sinopseFilme } =
+      respostaOpenAI.returnForms;
+
+    // 2️⃣ Criar página no Notion
+    const paginaNotion = await criarPaginaNovoFilme({
+      nomeFilme,
+      categoriaFilme,
+      sinopseFilme,
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log("📄 Página criada no Notion:", paginaNotion);
+
+    // 3️⃣ Retorno final ao cliente
+    res.status(200).json({
+      status: "success",
+      message: "Filme processado e página criada",
+      resultOpenAi: respostaOpenAI,
+      pageCreated: paginaNotion,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (erro) {
+    console.error("❌ Erro no /novoFilme:", erro.message);
+
+    res.status(500).json({
+      status: "erro",
+      message: "Erro ao processar a requisição",
+      details: erro.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
 app.get("/", (req, res) => {
   res.send("Olá, mundo");
