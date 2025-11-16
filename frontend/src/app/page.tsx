@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
 
 type OptionType =
@@ -78,7 +78,6 @@ export default function AssistentePage() {
 
   const handleOptionClick = (optionId: OptionType) => {
     setSelectedOption(optionId);
-
     if (optionId === "sugestoes") {
       setFormStep(1);
       setSelectedSuggestionType(null);
@@ -100,9 +99,12 @@ export default function AssistentePage() {
     if (type === "Local") {
       setFormStep(2);
     } else {
+      // For other types, just log and close modal
       console.log("[v0] Resultado final:", type);
       setSelectedOption(null);
-      toast(`Sugestão registrada: ${type}`);
+      toast.success("Sugestão registrada", {
+        description: `Você selecionou: ${type}`,
+      });
     }
   };
 
@@ -112,7 +114,6 @@ export default function AssistentePage() {
       setCustomLocation("");
       return;
     }
-
     setFormData({ ...formData, tipoLocal: type });
     console.log("[v0] Tipo de local selecionado:", type);
     setFormStep(3);
@@ -120,16 +121,14 @@ export default function AssistentePage() {
 
   const handleCustomLocationSubmit = () => {
     if (!customLocation.trim()) {
-      toast("Por favor, digite o tipo de local.");
+      toast.error("Por favor, digite o tipo de local.");
       return;
     }
-
     setFormData({ ...formData, tipoLocal: customLocation });
     console.log(
       "[v0] Tipo de local selecionado (customizado):",
       customLocation
     );
-
     setShowLocationOther(false);
     setFormStep(3);
   };
@@ -152,14 +151,16 @@ export default function AssistentePage() {
 
     const finalResult = `${updatedFormData.tipoLocal}; ${updatedFormData.tipoSaida}; ${updatedFormData.preferenciaComida}`;
     console.log("[v0] Resultado final:", finalResult);
+
     alert(finalResult);
 
+    setShowFoodOther(false);
     setSelectedOption(null);
   };
 
   const handleCustomFoodSubmit = () => {
     if (!customFood.trim()) {
-      toast("Por favor, digite a preferência de comida.");
+      toast.error("Por favor, digite a preferência de comida.");
       return;
     }
 
@@ -168,6 +169,7 @@ export default function AssistentePage() {
 
     const finalResult = `${updatedFormData.tipoLocal}; ${updatedFormData.tipoSaida}; ${updatedFormData.preferenciaComida}`;
     console.log("[v0] Resultado final:", finalResult);
+
     alert(finalResult);
 
     setShowFoodOther(false);
@@ -176,12 +178,12 @@ export default function AssistentePage() {
 
   const handleSubmit = async () => {
     if (!selectedOption) {
-      toast("Atenção: selecione uma opção antes de continuar.");
+      toast.error("Selecione uma opção antes de continuar.");
       return;
     }
 
     if (!promptText.trim()) {
-      toast("Digite seu prompt antes de enviar.");
+      toast.error("Digite seu prompt antes de enviar.");
       return;
     }
 
@@ -189,19 +191,59 @@ export default function AssistentePage() {
       (opt) => opt.id === selectedOption
     )?.route;
 
-    alert("Mensagem de respostas");
-    setShowCustomToast(true);
+    if (selectedOption === "novoFilme") {
+      try {
+        console.log("[v0] Enviando requisição para /api/novoFilme");
+        console.log("[v0] Prompt:", promptText);
 
-    setTimeout(() => {
-      setShowCustomToast(false);
-    }, 5000);
+        const response = await fetch("/api/novoFilme", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ input: promptText }),
+        });
 
-    console.log("Enviando para rota:", selectedRoute);
-    console.log("Texto do prompt:", promptText);
+        console.log("[v0] Response status:", response.status);
+
+        if (!response.ok) {
+          throw new Error(`Erro na requisição: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("[v0] Resposta da API:", data);
+
+        setPromptText("");
+        setShowCustomToast(true);
+
+        setTimeout(() => {
+          setShowCustomToast(false);
+        }, 5000);
+      } catch (error) {
+        console.error("[v0] Erro ao enviar requisição:", error);
+        toast.error(
+          `Não foi possível enviar a requisição: ${
+            error instanceof Error ? error.message : "Erro desconhecido"
+          }`
+        );
+      }
+    } else {
+      alert("Mensagem de respostas");
+      setShowCustomToast(true);
+
+      setTimeout(() => {
+        setShowCustomToast(false);
+      }, 5000);
+
+      console.log("Enviando para rota:", selectedRoute);
+      console.log("Texto do prompt:", promptText);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") handleSubmit();
+    if (e.key === "Enter") {
+      handleSubmit();
+    }
   };
 
   const handleModalBackdropClick = () => {
@@ -215,6 +257,7 @@ export default function AssistentePage() {
   };
 
   const handleModalContentClick = (e: React.MouseEvent) => {
+    console.log("[v0] Conteúdo do modal clicado - prevenindo fechamento");
     e.stopPropagation();
   };
 
@@ -222,7 +265,6 @@ export default function AssistentePage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-white">
       <h1 className="text-[#1F1F1F] text-5xl font-bold mb-12">Olá, João</h1>
 
-      {/** FORMULÁRIO SUGESTÕES */}
       {selectedOption === "sugestoes" && (
         <>
           <div
@@ -235,7 +277,7 @@ export default function AssistentePage() {
               className="w-full max-w-md p-8 rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] pointer-events-auto"
               onClick={handleModalContentClick}
             >
-              {/* Step 1 */}
+              {/* Step 1 - Initial question */}
               {formStep === 1 && (
                 <div className="space-y-6">
                   <h2 className="text-[#1F1F1F] text-xl font-semibold">
@@ -246,7 +288,7 @@ export default function AssistentePage() {
                       <button
                         key={type.id}
                         onClick={() => handleSuggestionTypeSelect(type.label)}
-                        className="w-full px-6 py-4 rounded-lg font-medium text-base bg-[#FAFAFA] hover:bg-[#F5F5F5] text-[#333] border border-[#E5E5E5] text-left"
+                        className="w-full px-6 py-4 rounded-lg font-medium text-base transition-all hover:bg-[#F5F5F5] bg-[#FAFAFA] text-[#333] border border-[#E5E5E5] text-left"
                       >
                         {type.label}
                       </button>
@@ -255,7 +297,7 @@ export default function AssistentePage() {
                 </div>
               )}
 
-              {/* Step 2 */}
+              {/* Step 2 - Question 1 (For Local) */}
               {formStep === 2 && (
                 <div className="space-y-6">
                   <h2 className="text-[#1F1F1F] text-xl font-semibold">
@@ -266,7 +308,7 @@ export default function AssistentePage() {
                       <button
                         key={type.id}
                         onClick={() => handleLocationTypeSelect(type.label)}
-                        className="w-full px-6 py-4 rounded-lg font-medium text-base bg-[#FAFAFA] hover:bg-[#F5F5F5] text-[#333] border border-[#E5E5E5] text-left"
+                        className="w-full px-6 py-4 rounded-lg font-medium text-base transition-all hover:bg-[#F5F5F5] bg-[#FAFAFA] text-[#333] border border-[#E5E5E5] text-left"
                       >
                         {type.label}
                       </button>
@@ -279,15 +321,15 @@ export default function AssistentePage() {
                           value={customLocation}
                           onChange={(e) => setCustomLocation(e.target.value)}
                           placeholder="Digite o tipo de local"
-                          className="w-full px-4 py-3 rounded-lg border border-[#E5E5E5] focus:ring-2 focus:ring-[#D0D0D0]"
+                          className="w-full px-4 py-3 rounded-lg border border-[#E5E5E5] focus:outline-none focus:ring-2 focus:ring-[#D0D0D0] text-[#333]"
                           autoFocus
                         />
                         <button
                           onClick={handleCustomLocationSubmit}
-                          className={`w-full px-6 py-4 rounded-lg font-medium text-base border transition-all ${
+                          className={`w-full px-6 py-4 rounded-lg font-medium text-base transition-all border ${
                             customLocation.trim()
-                              ? "bg-[#E8F5E9] text-[#2E7D32] border-[#C8E6C9] hover:bg-[#DFF0E0]"
-                              : "bg-[#F2F2F2] text-[#333] border-[#DADADA]"
+                              ? "bg-[#E8F5E9] hover:bg-[#DFF0E0] text-[#2E7D32] border-[#C8E6C9]"
+                              : "bg-[#F2F2F2] hover:bg-[#E0E0E0] text-[#333] border-[#DADADA]"
                           }`}
                         >
                           Prosseguir
@@ -298,7 +340,7 @@ export default function AssistentePage() {
                 </div>
               )}
 
-              {/* Step 3 */}
+              {/* Step 3 - Question 2 */}
               {formStep === 3 && (
                 <div className="space-y-6">
                   <h2 className="text-[#1F1F1F] text-xl font-semibold">
@@ -309,7 +351,7 @@ export default function AssistentePage() {
                       <button
                         key={type.id}
                         onClick={() => handleOutingTypeSelect(type.label)}
-                        className="w-full px-6 py-4 rounded-lg font-medium text-base bg-[#FAFAFA] hover:bg-[#F5F5F5] text-[#333] border border-[#E5E5E5] text-left"
+                        className="w-full px-6 py-4 rounded-lg font-medium text-base transition-all hover:bg-[#F5F5F5] bg-[#FAFAFA] text-[#333] border border-[#E5E5E5] text-left"
                       >
                         {type.label}
                       </button>
@@ -318,7 +360,7 @@ export default function AssistentePage() {
                 </div>
               )}
 
-              {/* Step 4 */}
+              {/* Step 4 - Question 3 */}
               {formStep === 4 && (
                 <div className="space-y-6">
                   <h2 className="text-[#1F1F1F] text-xl font-semibold">
@@ -329,7 +371,7 @@ export default function AssistentePage() {
                       <button
                         key={type.id}
                         onClick={() => handleFoodTypeSelect(type.label)}
-                        className="w-full px-6 py-4 rounded-lg font-medium text-base bg-[#FAFAFA] hover:bg-[#F5F5F5] text-[#333] border border-[#E5E5E5] text-left"
+                        className="w-full px-6 py-4 rounded-lg font-medium text-base transition-all hover:bg-[#F5F5F5] bg-[#FAFAFA] text-[#333] border border-[#E5E5E5] text-left"
                       >
                         {type.label}
                       </button>
@@ -342,15 +384,15 @@ export default function AssistentePage() {
                           value={customFood}
                           onChange={(e) => setCustomFood(e.target.value)}
                           placeholder="Digite a preferência de comida"
-                          className="w-full px-4 py-3 rounded-lg border border-[#E5E5E5] focus:ring-2 focus:ring-[#D0D0D0]"
+                          className="w-full px-4 py-3 rounded-lg border border-[#E5E5E5] focus:outline-none focus:ring-2 focus:ring-[#D0D0D0] text-[#333]"
                           autoFocus
                         />
                         <button
                           onClick={handleCustomFoodSubmit}
-                          className={`w-full px-6 py-4 rounded-lg font-medium text-base border transition-all ${
+                          className={`w-full px-6 py-4 rounded-lg font-medium text-base transition-all border ${
                             customFood.trim()
-                              ? "bg-[#E8F5E9] text-[#2E7D32] border-[#C8E6C9] hover:bg-[#DFF0E0]"
-                              : "bg-[#F2F2F2] text-[#333] border-[#DADADA]"
+                              ? "bg-[#E8F5E9] hover:bg-[#DFF0E0] text-[#2E7D32] border-[#C8E6C9]"
+                              : "bg-[#F2F2F2] hover:bg-[#E0E0E0] text-[#333] border-[#DADADA]"
                           }`}
                         >
                           Prosseguir
@@ -366,7 +408,8 @@ export default function AssistentePage() {
       )}
 
       {/* Container inferior */}
-      <div className="w-full max-w-2xl relative mt-12">
+      <div className="w-full max-w-2xl relative">
+        {/* Botões de opções - apenas mostrar os não selecionados */}
         <div className="flex flex-wrap gap-2 mb-4 justify-center">
           {options.map(
             (option) =>
@@ -374,7 +417,7 @@ export default function AssistentePage() {
                 <button
                   key={option.id}
                   onClick={() => handleOptionClick(option.id)}
-                  className="px-4 py-2 rounded-full font-medium text-sm bg-[#F2F2F2] border border-[#DADADA] hover:bg-[#E0E0E0] transition"
+                  className="px-4 py-2 rounded-full font-medium text-sm transition-all hover:bg-[#E0E0E0] bg-[#F2F2F2] text-[#333]"
                 >
                   {option.label}
                 </button>
@@ -383,30 +426,32 @@ export default function AssistentePage() {
         </div>
 
         <div className="relative rounded-3xl p-6 flex flex-col gap-3 bg-[#F5F5F5] border border-[#DADADA]">
+          {/* Selected chip inside prompt box */}
           {selectedOption && (
-            <div className="flex mb-1">
+            <div className="flex">
               <button
                 onClick={() => setSelectedOption(null)}
-                className="px-4 py-2 rounded-full font-medium text-sm bg-[#E0E0E0] border border-[#A8A8A8] text-[#111] shadow-sm hover:bg-[#D0D0D0]"
+                className="px-4 py-2 rounded-full font-medium text-sm transition-all hover:bg-[#D0D0D0] bg-[#E0E0E0] border border-[#A8A8A8] text-[#111] shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
               >
                 {options.find((opt) => opt.id === selectedOption)?.label}
               </button>
             </div>
           )}
 
+          {/* Input and Send button row */}
           <div className="flex items-center gap-3">
             <input
               type="text"
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
-              onKeyDown={handleKeyPress}
+              onKeyPress={handleKeyPress}
               placeholder="Digite seu prompt"
-              className="flex-1 bg-transparent border-none outline-none text-lg text-[#1F1F1F] placeholder-[#999]"
+              className="flex-1 bg-transparent border-none outline-none text-[#1F1F1F] placeholder-[#999] text-lg"
             />
 
             <button
               onClick={handleSubmit}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#F2F2F2] border border-[#DADADA] hover:bg-[#E8E8E8] text-[#333] transition"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#F2F2F2] border border-[#DADADA] text-[#333] text-sm font-medium hover:bg-[#E8E8E8] transition-all flex-shrink-0"
             >
               Enviar
               <ArrowRight className="w-4 h-4" />
@@ -416,7 +461,7 @@ export default function AssistentePage() {
       </div>
 
       {showCustomToast && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg bg-[#EAEAEA] border border-[#D0D0D0] text-[#222] shadow-md animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg bg-[#EAEAEA] border border-[#D0D0D0] text-[#222] text-sm shadow-[0_2px_8px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-bottom-2 z-50">
           Mensagem de respostas temporária
         </div>
       )}
