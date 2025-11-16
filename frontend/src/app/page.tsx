@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { ArrowRight } from "lucide-react";
 
 type OptionType =
@@ -22,7 +22,6 @@ export default function AssistentePage() {
   const [selectedOption, setSelectedOption] = useState<OptionType>(null);
   const [promptText, setPromptText] = useState("");
   const [showCustomToast, setShowCustomToast] = useState(false);
-  const { toast } = useToast();
 
   const handleOptionClick = (optionId: OptionType) => {
     setSelectedOption(optionId);
@@ -30,20 +29,12 @@ export default function AssistentePage() {
 
   const handleSubmit = async () => {
     if (!selectedOption) {
-      toast({
-        title: "Atenção",
-        description: "Selecione uma opção antes de continuar.",
-        variant: "destructive",
-      });
+      toast("Atenção: selecione uma opção antes de continuar.");
       return;
     }
 
     if (!promptText.trim()) {
-      toast({
-        title: "Atenção",
-        description: "Digite seu prompt antes de enviar.",
-        variant: "destructive",
-      });
+      toast("Digite seu prompt antes de enviar.");
       return;
     }
 
