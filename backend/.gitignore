@@ -1,0 +1,36 @@
+# ============================
+# NODE & NEXT.JS FRONT/BACKEND
+# ============================
+
+# Node modules
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# TypeScript build outputs
+dist/
+types/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# ============================
+# YOUR ORIGINAL IGNORE FILES
+# ============================
+testeNotionAPI.js
+testeNotionAPI2.js
+testeNotionAPI3.js
