@@ -16,9 +16,10 @@ Categoria: ${categoria}
 Endereço: ${adress}
 `;
 
-    const response = await client.chat.completions.create({
+    const response = await client.responses.create({
       model: "gpt-4o-mini",
-      messages: [
+
+      input: [
         {
           role: "system",
           content:
@@ -29,11 +30,13 @@ Endereço: ${adress}
           content: userMessage,
         },
       ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "local_description",
-          strict: true,
+
+      text: {
+        format: {
+          name: "local_description_format", // obrigatório
+          type: "json_schema",
+
+          // obrigatório: agora é "schema" direto
           schema: {
             type: "object",
             properties: {
@@ -63,7 +66,9 @@ Endereço: ${adress}
       },
     });
 
-    const resultOpenAI = JSON.parse(response.choices[0].message.content);
+    // Novo formato de saída no Responses API
+    const jsonText = response.output[0].content[0].text;
+    const resultOpenAI = JSON.parse(jsonText);
 
     console.log(
       "🔍 Resposta completa do ChatGPT:",
@@ -80,6 +85,7 @@ Endereço: ${adress}
 // -------------------------
 // NOVA FUNÇÃO PARA FILMES
 // -------------------------
+
 export async function assistentePessoalNovoFilme(userInput) {
   try {
     const prompt = `
@@ -91,7 +97,7 @@ retorne JSON com:
 - categoriaFilme
 - sinopseFilme
 
-# Se atente a categoria, garanta que a categoria está de acordo com o filme
+# Se atente à categoria, garanta que a categoria está de acordo com o filme
 
 Siga este formato:
 
@@ -104,9 +110,10 @@ Siga este formato:
 }
 `;
 
-    const response = await client.chat.completions.create({
+    const response = await client.responses.create({
       model: "gpt-4o-mini",
-      messages: [
+
+      input: [
         {
           role: "system",
           content:
@@ -117,11 +124,14 @@ Siga este formato:
           content: prompt,
         },
       ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "filme_schema",
-          strict: true,
+
+      // ✔️ AGORA NO FORMATO OFICIAL
+      text: {
+        format: {
+          name: "filme_schema_format",
+          type: "json_schema",
+
+          // 👇 ESTE É O CAMPO OBRIGATÓRIO QUE ESTAVA FALTANDO
           schema: {
             type: "object",
             properties: {
@@ -143,7 +153,8 @@ Siga este formato:
       },
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const jsonText = response.output[0].content[0].text;
+    const result = JSON.parse(jsonText);
 
     console.log("🎬 Resultado OpenAI (novoFilme):", result);
 
