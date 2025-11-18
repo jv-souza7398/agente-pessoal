@@ -20,6 +20,11 @@ interface FormData {
   preferenciaComida: string;
 }
 
+interface NovoLocalFormData {
+  nomeLocal: string;
+  categoria: string;
+}
+
 const options = [
   { id: "sugestoes" as const, label: "Sugestões", route: "sugestaoAssistente" },
   { id: "novoLocal" as const, label: "Novo local", route: "novoLocal" },
@@ -76,6 +81,13 @@ export default function AssistentePage() {
   const [showFoodOther, setShowFoodOther] = useState(false);
   const [customFood, setCustomFood] = useState("");
 
+  const [novoLocalData, setNovoLocalData] = useState<NovoLocalFormData>({
+    nomeLocal: "",
+    categoria: "",
+  });
+  const [showCategoriaOther, setShowCategoriaOther] = useState(false);
+  const [customCategoria, setCustomCategoria] = useState("");
+
   const handleOptionClick = (optionId: OptionType) => {
     setSelectedOption(optionId);
     if (optionId === "sugestoes") {
@@ -87,6 +99,14 @@ export default function AssistentePage() {
         tipoSaida: "",
         preferenciaComida: "",
       });
+    }
+    if (optionId === "novoLocal") {
+      setNovoLocalData({
+        nomeLocal: "",
+        categoria: "",
+      });
+      setShowCategoriaOther(false);
+      setCustomCategoria("");
     }
   };
 
@@ -176,6 +196,151 @@ export default function AssistentePage() {
     setSelectedOption(null);
   };
 
+  const handleNovoLocalSubmit = async () => {
+    console.log("[v0] Iniciando submissão de Novo Local");
+
+    // Validate form
+    if (!novoLocalData.nomeLocal.trim()) {
+      toast.error("Por favor, digite o nome do local.");
+      return;
+    }
+
+    const categoria = showCategoriaOther
+      ? customCategoria
+      : novoLocalData.categoria;
+    if (!categoria.trim()) {
+      toast.error("Por favor, selecione uma categoria.");
+      return;
+    }
+
+    // Get device location
+    if (!navigator.geolocation) {
+      toast.error("Geolocalização não suportada pelo navegador.");
+      return;
+    }
+
+    try {
+      console.log("[v0] Capturando localização do dispositivo...");
+
+      const position = await new Promise<GeolocationPosition>(
+        (resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        }
+      );
+
+      const { latitude, longitude } = position.coords;
+
+      console.log("[v0] Coordenadas capturadas:", latitude, longitude);
+
+      console.log("[v0] Convertendo coordenadas em endereço...");
+
+      const geocodeResponse = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+        {
+          headers: {
+            "User-Agent": "PersonalAssistantApp/1.0",
+          },
+        }
+      );
+
+      if (!geocodeResponse.ok) {
+        throw new Error("Erro ao obter endereço da localização");
+      }
+
+      const geocodeData = await geocodeResponse.json();
+
+      // Format address
+      const address = geocodeData.address;
+      let formattedAddress = "";
+
+      if (address.road) {
+        formattedAddress = address.road;
+        if (address.house_number) {
+          formattedAddress += `, ${address.house_number}`;
+        }
+      } else if (address.suburb) {
+        formattedAddress = address.suburb;
+      } else if (address.city) {
+        formattedAddress = address.city;
+      } else {
+        formattedAddress = geocodeData.display_name
+          .split(",")
+          .slice(0, 2)
+          .join(",");
+      }
+
+      console.log("[v0] Endereço formatado:", formattedAddress);
+
+      // Get current timestamp
+      const now = new Date();
+      const timestamp = now.toLocaleDateString("pt-BR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const payload = {
+        forms: {
+          timestamp,
+          adress: formattedAddress,
+          deviceName: "iPhone de João",
+        },
+        details: {
+          nomelocal: novoLocalData.nomeLocal,
+          categoria: categoria,
+        },
+      };
+
+      console.log("[v0] Enviando payload:", payload);
+
+      const response = await fetch("/api/novoLocal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log("[v0] Response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || `Erro na requisição: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("[v0] Resposta da API:", data);
+
+      toast.success("Local cadastrado com sucesso!");
+
+      // Close modal and reset form
+      setSelectedOption(null);
+      setNovoLocalData({
+        nomeLocal: "",
+        categoria: "",
+      });
+      setShowCategoriaOther(false);
+      setCustomCategoria("");
+    } catch (error) {
+      console.error("[v0] Erro ao enviar requisição:", error);
+      if (error instanceof GeolocationPositionError) {
+        toast.error(
+          "Não foi possível obter sua localização. Verifique as permissões."
+        );
+      } else {
+        toast.error(
+          `Erro ao cadastrar local: ${
+            error instanceof Error ? error.message : "Erro desconhecido"
+          }`
+        );
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedOption) {
       toast.error("Selecione uma opção antes de continuar.");
@@ -227,6 +392,8 @@ export default function AssistentePage() {
           }`
         );
       }
+    } else if (selectedOption === "novoLocal") {
+      handleNovoLocalSubmit();
     } else {
       alert("Mensagem de respostas");
       setShowCustomToast(true);
@@ -254,6 +421,12 @@ export default function AssistentePage() {
     setShowFoodOther(false);
     setCustomLocation("");
     setCustomFood("");
+    setNovoLocalData({
+      nomeLocal: "",
+      categoria: "",
+    });
+    setShowCategoriaOther(false);
+    setCustomCategoria("");
   };
 
   const handleModalContentClick = (e: React.MouseEvent) => {
@@ -264,6 +437,122 @@ export default function AssistentePage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-white">
       <h1 className="text-[#1F1F1F] text-5xl font-bold mb-12">Olá, João</h1>
+
+      {selectedOption === "novoLocal" && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/20 z-40 cursor-pointer"
+            onClick={handleModalBackdropClick}
+          />
+
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+            <div
+              className="w-full max-w-md p-8 rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] pointer-events-auto"
+              onClick={handleModalContentClick}
+            >
+              <div className="space-y-6">
+                {/* Question 1: Nome do local */}
+                <div className="space-y-3">
+                  <h2 className="text-[#1F1F1F] text-xl font-semibold">
+                    Digite o nome do local
+                  </h2>
+                  <input
+                    type="text"
+                    value={novoLocalData.nomeLocal}
+                    onChange={(e) =>
+                      setNovoLocalData({
+                        ...novoLocalData,
+                        nomeLocal: e.target.value,
+                      })
+                    }
+                    placeholder="Ex: Restaurante da Praça"
+                    className="w-full px-4 py-3 rounded-lg border border-[#E5E5E5] focus:outline-none focus:ring-2 focus:ring-[#D0D0D0] text-[#333]"
+                  />
+                </div>
+
+                {/* Question 2: Categoria */}
+                <div className="space-y-3">
+                  <h2 className="text-[#1F1F1F] text-xl font-semibold">
+                    Qual a categoria do local?
+                  </h2>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={() => {
+                        setNovoLocalData({
+                          ...novoLocalData,
+                          categoria: "Restaurante",
+                        });
+                        setShowCategoriaOther(false);
+                      }}
+                      className={`w-full px-6 py-4 rounded-lg font-medium text-base transition-all border text-left ${
+                        novoLocalData.categoria === "Restaurante" &&
+                        !showCategoriaOther
+                          ? "bg-[#E8E8E8] border-[#B0B0B0] text-[#111]"
+                          : "hover:bg-[#F5F5F5] bg-[#FAFAFA] text-[#333] border-[#E5E5E5]"
+                      }`}
+                    >
+                      Restaurante
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setNovoLocalData({
+                          ...novoLocalData,
+                          categoria: "Bar",
+                        });
+                        setShowCategoriaOther(false);
+                      }}
+                      className={`w-full px-6 py-4 rounded-lg font-medium text-base transition-all border text-left ${
+                        novoLocalData.categoria === "Bar" && !showCategoriaOther
+                          ? "bg-[#E8E8E8] border-[#B0B0B0] text-[#111]"
+                          : "hover:bg-[#F5F5F5] bg-[#FAFAFA] text-[#333] border-[#E5E5E5]"
+                      }`}
+                    >
+                      Bar
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowCategoriaOther(true);
+                        setNovoLocalData({ ...novoLocalData, categoria: "" });
+                        setCustomCategoria("");
+                      }}
+                      className={`w-full px-6 py-4 rounded-lg font-medium text-base transition-all border text-left ${
+                        showCategoriaOther
+                          ? "bg-[#E8E8E8] border-[#B0B0B0] text-[#111]"
+                          : "hover:bg-[#F5F5F5] bg-[#FAFAFA] text-[#333] border-[#E5E5E5]"
+                      }`}
+                    >
+                      Outro
+                    </button>
+
+                    {showCategoriaOther && (
+                      <div className="flex flex-col gap-3 mt-2 pt-3 border-t border-[#E5E5E5]">
+                        <input
+                          type="text"
+                          value={customCategoria}
+                          onChange={(e) => setCustomCategoria(e.target.value)}
+                          placeholder="Digite a categoria"
+                          className="w-full px-4 py-3 rounded-lg border border-[#E5E5E5] focus:outline-none focus:ring-2 focus:ring-[#D0D0D0] text-[#333]"
+                          autoFocus
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Submit button */}
+                <button
+                  onClick={handleNovoLocalSubmit}
+                  className="w-full px-6 py-4 rounded-lg font-medium text-base transition-all bg-[#F2F2F2] hover:bg-[#E8E8E8] text-[#333] border border-[#DADADA]"
+                >
+                  Enviar
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {selectedOption === "sugestoes" && (
         <>
