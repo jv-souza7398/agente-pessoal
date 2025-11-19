@@ -5,9 +5,14 @@ import { validateNovoLocal } from "./middleware.js";
 import {
   assistentePessoalNovoLocal,
   assistentePessoalNovoFilme,
+  escolherLocalChatGPT,
 } from "./openaiservices.js";
 
-import { criarPaginaNovoLocal, criarPaginaNovoFilme } from "./notionService.js";
+import {
+  criarPaginaNovoLocal,
+  criarPaginaNovoFilme,
+  listarLocaisFiltrados,
+} from "./notionService.js";
 
 dotenv.config();
 
@@ -143,6 +148,44 @@ app.post("/novoFilme", async (req, res) => {
       message: "Erro ao processar a requisição",
       details: erro.message,
       timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+app.post("/sugestaoLocal", authenticateAPI, async (req, res) => {
+  try {
+    const { preferencias } = req.body;
+
+    if (!preferencias) {
+      return res.status(400).json({
+        status: "erro",
+        message:
+          "O campo 'preferencias' é obrigatório. Exemplo: 'Restaurante; Casal; Italiana'",
+      });
+    }
+
+    console.log("📍 Preferências recebidas:", preferencias);
+
+    // 1️⃣ Buscar locais no Notion
+    const locais = await listarLocaisFiltrados();
+    console.log("📄 Locais retornados:", locais.length);
+
+    // 2️⃣ Enviar para o ChatGPT escolher
+    const localEscolhido = await escolherLocalChatGPT(preferencias, locais);
+
+    // 3️⃣ Retornar para o cliente
+    return res.status(200).json({
+      status: "success",
+      localEscolhido,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (erro) {
+    console.error("❌ Erro no /sugestaoLocal:", erro);
+
+    return res.status(500).json({
+      status: "erro",
+      message: "Erro ao escolher sugestão de local",
+      details: erro.message,
     });
   }
 });

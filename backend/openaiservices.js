@@ -8,6 +8,9 @@ const client = new OpenAI({
   apiKey: process.env.API_KEY_OPENAI,
 });
 
+// -------------------------
+//  FUNÇÃO PARA LOCAIS
+// -------------------------
 export async function assistentePessoalNovoLocal(nomelocal, categoria, adress) {
   try {
     const userMessage = `
@@ -83,9 +86,8 @@ Endereço: ${adress}
 }
 
 // -------------------------
-// NOVA FUNÇÃO PARA FILMES
+//  FUNÇÃO PARA FILMES
 // -------------------------
-
 export async function assistentePessoalNovoFilme(userInput) {
   try {
     const prompt = `
@@ -162,5 +164,58 @@ Siga este formato:
   } catch (erro) {
     console.error("❌ Erro ao chamar OpenAI (novoFilme):", erro.message);
     throw erro;
+  }
+}
+
+// -------------------------
+//  FUNÇÃO PARA SUGESTÃO LOCAIS
+// -------------------------
+export async function escolherLocalChatGPT(preferencias, locais) {
+  const prompt = `
+Você é um assistente especializado em encontrar locais ideais para o usuário.
+
+O usuário forneceu as seguintes preferências:
+"${preferencias}"
+
+E aqui está a lista de locais disponíveis (cada local contém nome, endereço, categoria e sugestão de uso):
+
+${JSON.stringify(locais, null, 2)}
+
+Com base nisso, escolha **apenas UM** local que mais combina com as preferências especificadas.
+
+Responda APENAS em JSON no formato:
+
+{
+  "nomelocal": "...",
+  "endereco": "...",
+  "sugestaodeUso": "..."
+}
+
+Apenas um único local deve ser retornado.
+Se nenhum local se encaixar perfeitamente, retorne o local mais próximo das preferências.
+  `;
+
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content:
+          "Você é um especialista em recomendar locais de acordo com preferências do usuário.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    temperature: 0.3,
+  });
+
+  // Parse do JSON retornado pelo GPT
+  try {
+    return JSON.parse(completion.choices[0].message.content);
+  } catch (err) {
+    console.error("Erro ao interpretar JSON retornado:", err);
+    throw new Error("A resposta do ChatGPT não pôde ser convertida em JSON.");
   }
 }

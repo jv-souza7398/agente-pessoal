@@ -8,6 +8,9 @@ const notion = new Client({
   notionVersion: "2025-09-03",
 });
 
+// ----------------------------------------
+// FUNÇÃO PARA CRIAR PAGE LOCAL
+// ----------------------------------------
 export async function criarPaginaNovoLocal(dados) {
   try {
     const {
@@ -66,7 +69,7 @@ export async function criarPaginaNovoLocal(dados) {
 }
 
 // -------------------------
-// NOVA FUNÇÃO PARA FILMES
+// FUNÇÃO PARA CRIAR PAGE FILMES
 // -------------------------
 export async function criarPaginaNovoFilme({
   nomeFilme,
@@ -120,5 +123,58 @@ export async function criarPaginaNovoFilme({
   } catch (erro) {
     console.error("❌ Erro ao criar página de filme:", erro.message);
     throw erro;
+  }
+}
+
+// ----------------------------------------
+// LISTAR LOCAIS DO NOTION (filtrando campos)
+// ---------------------------------------
+
+export async function listarLocaisFiltrados() {
+  const DATABASE_ID = process.env.NOTION_DATABASE_LOCAIS_ID;
+  const NOTION_API_KEY = process.env.NOTION_API_KEY;
+
+  try {
+    console.log("🔍 Consultando Notion via HTTP RAW...");
+
+    const response = await fetch(
+      `https://api.notion.com/v1/databases/${DATABASE_ID}/query`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${NOTION_API_KEY}`,
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          page_size: 100,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Erro Notion ${response.status}: ${text}`);
+    }
+
+    const json = await response.json();
+
+    const locais = json.results.map((page) => {
+      const props = page.properties;
+
+      return {
+        id: page.id,
+        nome: props["Nome do Local"]?.title?.[0]?.plain_text ?? "",
+        categoria: props["Categoria"]?.rich_text?.[0]?.plain_text ?? "",
+        endereco: props["Endereço"]?.rich_text?.[0]?.plain_text ?? "",
+        sugestaoDeUso:
+          props["Sugestões de Uso"]?.rich_text?.[0]?.plain_text ?? "",
+      };
+    });
+
+    return locais;
+  } catch (err) {
+    console.error("❌ Erro listarLocaisFiltrados (HTTP RAW):", err);
+    throw err;
   }
 }
