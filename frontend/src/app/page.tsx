@@ -25,6 +25,16 @@ interface NovoLocalFormData {
   categoria: string;
 }
 
+interface SugestaoResult {
+  status: string;
+  localEscolhido: {
+    nomelocal: string;
+    endereco: string;
+    sugestaodeUso: string;
+  };
+  timestamp: string;
+}
+
 const options = [
   { id: "sugestoes" as const, label: "Sugestões", route: "sugestaoAssistente" },
   { id: "novoLocal" as const, label: "Novo local", route: "novoLocal" },
@@ -87,6 +97,11 @@ export default function AssistentePage() {
   });
   const [showCategoriaOther, setShowCategoriaOther] = useState(false);
   const [customCategoria, setCustomCategoria] = useState("");
+
+  const [sugestaoResult, setSugestaoResult] = useState<SugestaoResult | null>(
+    null
+  );
+  const [isLoadingSugestao, setIsLoadingSugestao] = useState(false);
 
   const handleOptionClick = (optionId: OptionType) => {
     setSelectedOption(optionId);
@@ -159,7 +174,7 @@ export default function AssistentePage() {
     setFormStep(4);
   };
 
-  const handleFoodTypeSelect = (type: string) => {
+  const handleFoodTypeSelect = async (type: string) => {
     if (type === "Outro") {
       setShowFoodOther(true);
       setCustomFood("");
@@ -169,16 +184,12 @@ export default function AssistentePage() {
     const updatedFormData = { ...formData, preferenciaComida: type };
     setFormData(updatedFormData);
 
-    const finalResult = `${updatedFormData.tipoLocal}; ${updatedFormData.tipoSaida}; ${updatedFormData.preferenciaComida}`;
-    console.log("[v0] Resultado final:", finalResult);
-
-    alert(finalResult);
+    await fetchSugestaoLocal(updatedFormData);
 
     setShowFoodOther(false);
-    setSelectedOption(null);
   };
 
-  const handleCustomFoodSubmit = () => {
+  const handleCustomFoodSubmit = async () => {
     if (!customFood.trim()) {
       toast.error("Por favor, digite a preferência de comida.");
       return;
@@ -187,13 +198,65 @@ export default function AssistentePage() {
     const updatedFormData = { ...formData, preferenciaComida: customFood };
     setFormData(updatedFormData);
 
-    const finalResult = `${updatedFormData.tipoLocal}; ${updatedFormData.tipoSaida}; ${updatedFormData.preferenciaComida}`;
-    console.log("[v0] Resultado final:", finalResult);
-
-    alert(finalResult);
+    await fetchSugestaoLocal(updatedFormData);
 
     setShowFoodOther(false);
-    setSelectedOption(null);
+  };
+
+  const fetchSugestaoLocal = async (data: FormData) => {
+    const parametros = `${data.tipoLocal}; ${data.tipoSaida}; ${data.preferenciaComida}`;
+    console.log("[v0] Buscando sugestão de local com parâmetros:", parametros);
+
+    setIsLoadingSugestao(true);
+
+    try {
+      const response = await fetch("/api/sugestaoLocal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ parametros }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro na requisição: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("[v0] Resultado da sugestão:", result);
+
+      setSugestaoResult(result);
+      setSelectedOption(null); // Close the form modal
+    } catch (error) {
+      console.error("[v0] Erro ao buscar sugestão:", error);
+      toast.error("Não foi possível buscar a sugestão. Tente novamente.");
+    } finally {
+      setIsLoadingSugestao(false);
+    }
+  };
+
+  const handleNovaSugestao = async () => {
+    if (
+      !formData.tipoLocal ||
+      !formData.tipoSaida ||
+      !formData.preferenciaComida
+    ) {
+      toast.error("Dados do formulário não encontrados.");
+      return;
+    }
+
+    await fetchSugestaoLocal(formData);
+  };
+
+  const handleCloseSugestaoResult = () => {
+    console.log("[v0] Fechando card de resultado");
+    setSugestaoResult(null);
+    setFormData({
+      tipoSugestao: "",
+      tipoLocal: "",
+      tipoSaida: "",
+      preferenciaComida: "",
+    });
   };
 
   const handleNovoLocalSubmit = async () => {
@@ -438,6 +501,65 @@ export default function AssistentePage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-white">
       <h1 className="text-[#1F1F1F] text-5xl font-bold mb-12">Olá, João</h1>
 
+      {sugestaoResult && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/20 z-40 cursor-pointer"
+            onClick={handleCloseSugestaoResult}
+          />
+
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+            <div
+              className="w-full max-w-md p-8 rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-6">
+                <h2 className="text-[#1F1F1F] text-3xl font-bold mb-6">
+                  Sugestão de Local
+                </h2>
+
+                <div className="space-y-5">
+                  <div>
+                    <p className="text-[#888] text-[10px] font-bold uppercase tracking-widest mb-1.5">
+                      Nome do Local
+                    </p>
+                    <p className="text-[#1F1F1F] text-2xl font-semibold leading-tight">
+                      {sugestaoResult.localEscolhido.nomelocal}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[#888] text-[10px] font-bold uppercase tracking-widest mb-1.5">
+                      Endereço
+                    </p>
+                    <p className="text-[#444] text-base leading-relaxed">
+                      {sugestaoResult.localEscolhido.endereco}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[#888] text-[10px] font-bold uppercase tracking-widest mb-1.5">
+                      Sugestão de Uso
+                    </p>
+                    <p className="text-[#444] text-base leading-relaxed">
+                      {sugestaoResult.localEscolhido.sugestaodeUso}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleNovaSugestao}
+                  disabled={isLoadingSugestao}
+                  className="w-full px-6 py-4 rounded-lg font-medium text-base transition-all bg-[#F2F2F2] hover:bg-[#E8E8E8] text-[#333] border border-[#DADADA] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoadingSugestao ? "Buscando..." : "Nova sugestão"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {selectedOption === "novoLocal" && (
         <>
           <div
@@ -650,7 +772,7 @@ export default function AssistentePage() {
               )}
 
               {/* Step 4 - Question 3 */}
-              {formStep === 4 && (
+              {formStep === 4 && !isLoadingSugestao && (
                 <div className="space-y-6">
                   <h2 className="text-[#1F1F1F] text-xl font-semibold">
                     Alguma preferência de comida?
@@ -689,6 +811,13 @@ export default function AssistentePage() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Step 4 - Loading state */}
+              {formStep === 4 && isLoadingSugestao && (
+                <div className="text-center py-8">
+                  <p className="text-[#666] text-lg">Buscando sugestão...</p>
                 </div>
               )}
             </div>
