@@ -195,27 +195,48 @@ Apenas um único local deve ser retornado.
 Se nenhum local se encaixar perfeitamente, retorne o local mais próximo das preferências.
   `;
 
-  const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content:
-          "Você é um especialista em recomendar locais de acordo com preferências do usuário.",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-    temperature: 0.3,
-  });
-
-  // Parse do JSON retornado pelo GPT
   try {
-    return JSON.parse(completion.choices[0].message.content);
+    const response = await client.responses.create({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+
+      input: [
+        {
+          role: "system",
+          content:
+            "Você é um especialista em recomendar locais de acordo com preferências do usuário.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+
+      text: {
+        format: {
+          name: "local_recommendation_format", // obrigatório
+          type: "json_schema",
+
+          // JSON Schema final (sem json_schema wrapper)
+          schema: {
+            type: "object",
+            properties: {
+              nomelocal: { type: "string" },
+              endereco: { type: "string" },
+              sugestaodeUso: { type: "string" },
+            },
+            required: ["nomelocal", "endereco", "sugestaodeUso"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+
+    // NOVO ponto de saída
+    const jsonText = response.output[0].content[0].text;
+    return JSON.parse(jsonText);
   } catch (err) {
     console.error("Erro ao interpretar JSON retornado:", err);
-    throw new Error("A resposta do ChatGPT não pôde ser convertida em JSON.");
+    throw new Error("A resposta da API não pôde ser convertida em JSON.");
   }
 }
